@@ -1,8 +1,17 @@
-import { HttpTypes } from "@medusajs/types"
+﻿import { HttpTypes } from "@medusajs/types"
 import { NextRequest, NextResponse } from "next/server"
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
-const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+/**
+ * Prefer server-only envs (works in middleware on Vercel reliably),
+ * fallback to NEXT_PUBLIC_* for local dev.
+ */
+const BACKEND_URL =
+  process.env.MEDUSA_BACKEND_URL || process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
+
+const PUBLISHABLE_API_KEY =
+  process.env.MEDUSA_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "dk"
 
 const regionMapCache = {
@@ -17,35 +26,61 @@ async function getRegionMap(cacheId: string) {
     !regionMap.keys().next().value ||
     regionMapUpdated < Date.now() - 3600 * 1000
   ) {
-    // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-    const { regions } = await fetch(`${BACKEND_URL}/store/regions`, {
+    // If env missing, don't crash middleware (prevents 500 on Vercel)
+    if (!BACKEND_URL || !PUBLISHABLE_API_KEY) {
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "middleware.ts: Missing BACKEND_URL or PUBLISHABLE_API_KEY. Set MEDUSA_BACKEND_URL + MEDUSA_PUBLISHABLE_KEY (recommended) or NEXT_PUBLIC_MEDUSA_*."
+        )
+      }
+      return regionMapCache.regionMap
+    }
+
+    const res = await fetch(`${BACKEND_URL}/store/regions`, {
       headers: {
-        "x-publishable-api-key": PUBLISHABLE_API_KEY!,
+        "x-publishable-api-key": PUBLISHABLE_API_KEY,
       },
       next: {
         revalidate: 3600,
         tags: [`regions-${cacheId}`],
       },
-    }).then(async (response) => {
-      const json = await response.json()
-
-      if (!response.ok) {
-        throw new Error(json.message)
+    }).catch((e) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error("middleware.ts: fetch(/store/regions) failed", e)
       }
-
-      return json
+      return null
     })
 
+    if (!res) return regionMapCache.regionMap
+
+    const json = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "middleware.ts: /store/regions returned non-OK",
+          json?.message || json
+        )
+      }
+      return regionMapCache.regionMap
+    }
+
+    const regions = json?.regions
+
     if (!regions?.length) {
-      throw new Error(
-        "No regions found. Please set up regions in your Medusa Admin."
-      )
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "middleware.ts: No regions found. Please set up regions in your Medusa Admin."
+        )
+      }
+      return regionMapCache.regionMap
     }
 
     // Create a map of country codes to regions.
     regions.forEach((region: HttpTypes.StoreRegion) => {
       region.countries?.forEach((c) => {
-        regionMapCache.regionMap.set(c.iso_2 ?? "", region)
+        const code = (c.iso_2 ?? "").toLowerCase()
+        if (code) regionMapCache.regionMap.set(code, region)
       })
     })
 
@@ -55,17 +90,12 @@ async function getRegionMap(cacheId: string) {
   return regionMapCache.regionMap
 }
 
-/**
- * Fetches regions from Medusa and sets the region cookie.
- * @param request
- * @param response
- */
 async function getCountryCode(
   request: NextRequest,
-  regionMap: Map<string, HttpTypes.StoreRegion | number>
+  regionMap: Map<string, HttpTypes.StoreRegion>
 ) {
   try {
-    let countryCode
+    let countryCode: string | undefined
 
     const vercelCountryCode = request.headers
       .get("x-vercel-ip-country")
@@ -86,19 +116,14 @@ async function getCountryCode(
     return countryCode
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
-      console.error(
-        "Middleware.ts: Error getting the country code. Did you set up regions in your Medusa Admin and define a NEXT_PUBLIC_MEDUSA_BACKEND_URL environment variable?"
-      )
+      console.error("middleware.ts: Error getting the country code", error)
     }
   }
 }
 
 async function setCacheId(request: NextRequest, response: NextResponse) {
   const cacheId = request.nextUrl.searchParams.get("_medusa_cache_id")
-
-  if (cacheId) {
-    return cacheId
-  }
+  if (cacheId) return cacheId
 
   const newCacheId = crypto.randomUUID()
   response.cookies.set("_medusa_cache_id", newCacheId, { maxAge: 60 * 60 * 24 })
@@ -107,66 +132,77 @@ async function setCacheId(request: NextRequest, response: NextResponse) {
 
 /**
  * Middleware to handle region selection and cache id.
+ * IMPORTANT: Must never throw (otherwise Vercel shows MIDDLEWARE_INVOCATION_FAILED)
  */
 export async function middleware(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const cartId = searchParams.get("cart_id")
-  const checkoutStep = searchParams.get("step")
-  const cacheIdCookie = request.cookies.get("_medusa_cache_id")
-  const cartIdCookie = request.cookies.get("_medusa_cart_id")
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const cartId = searchParams.get("cart_id")
+    const checkoutStep = searchParams.get("step")
+    const cacheIdCookie = request.cookies.get("_medusa_cache_id")
+    const cartIdCookie = request.cookies.get("_medusa_cart_id")
 
-  let redirectUrl = request.nextUrl.href
+    let redirectUrl = request.nextUrl.href
+    let response = NextResponse.redirect(redirectUrl, 307)
 
-  let response = NextResponse.redirect(redirectUrl, 307)
+    // static asset quick pass
+    if (request.nextUrl.pathname.includes(".")) return NextResponse.next()
 
-  // Set a cache id to invalidate the cache for this instance only
-  const cacheId = await setCacheId(request, response)
+    // auth routes pass
+    if (
+      request.nextUrl.pathname === "/login" ||
+      request.nextUrl.pathname === "/reset-password" ||
+      request.nextUrl.pathname === "/set-password"
+    ) {
+      return NextResponse.next()
+    }
 
-  const regionMap = await getRegionMap(cacheId)
+    // Set a cache id to invalidate the cache for this instance only
+    const cacheId = await setCacheId(request, response)
 
-  const countryCode = regionMap && (await getCountryCode(request, regionMap))
+    const regionMap = await getRegionMap(cacheId)
 
-  const urlHasCountryCode =
-    countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
+    // If region map empty, fail open (no redirect) — prevents 500
+    if (!regionMap || !regionMap.keys().next().value) {
+      return NextResponse.next()
+    }
 
-  // check if one of the country codes is in the url
-  if (urlHasCountryCode && (!cartId || cartIdCookie) && cacheIdCookie) {
+    const countryCode = await getCountryCode(request, regionMap)
+
+    const urlHasCountryCode =
+      countryCode &&
+      request.nextUrl.pathname.split("/")[1]?.toLowerCase() === countryCode
+
+    if (urlHasCountryCode && (!cartId || cartIdCookie) && cacheIdCookie) {
+      return NextResponse.next()
+    }
+
+    const redirectPath =
+      request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
+
+    const queryString = request.nextUrl.search ? request.nextUrl.search : ""
+
+    // If no country code is set, redirect to the relevant region.
+    if (!urlHasCountryCode && countryCode) {
+      redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`
+      response = NextResponse.redirect(redirectUrl, 307)
+    }
+
+    // If a cart_id is in the params, set cookie and redirect to address step.
+    if (cartId && !checkoutStep) {
+      redirectUrl = `${redirectUrl}&step=address`
+      response = NextResponse.redirect(redirectUrl, 307)
+      response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
+    }
+
+    return response
+  } catch (e) {
+    // fail open — never crash middleware
+    if (process.env.NODE_ENV === "development") {
+      console.error("middleware.ts crashed, failing open:", e)
+    }
     return NextResponse.next()
   }
-
-  // check if the url is a static asset
-  if (request.nextUrl.pathname.includes(".")) {
-    return NextResponse.next()
-  }
-
-  // If the URL is /login, proceed without redirection
-  if (
-    request.nextUrl.pathname === "/login" ||
-    request.nextUrl.pathname === "/reset-password" ||
-    request.nextUrl.pathname === "/set-password"
-  ) {
-    return NextResponse.next()
-  }
-
-  const redirectPath =
-    request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
-
-  const queryString = request.nextUrl.search ? request.nextUrl.search : ""
-
-  // If no country code is set, we redirect to the relevant region.
-  if (!urlHasCountryCode && countryCode) {
-    redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`
-    response = NextResponse.redirect(`${redirectUrl}`, 307)
-  }
-
-  // If a cart_id is in the params, we set it as a cookie and redirect to the address step.
-  if (cartId && !checkoutStep) {
-    redirectUrl = `${redirectUrl}&step=address`
-    response = NextResponse.redirect(`${redirectUrl}`, 307)
-    response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
-  }
-
-  return response
 }
 
 export const config = {
