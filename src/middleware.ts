@@ -12,7 +12,7 @@ const PUBLISHABLE_API_KEY =
   process.env.MEDUSA_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 
-const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "dk"
+const DEFAULT_REGION = (process.env.NEXT_PUBLIC_DEFAULT_REGION || "dk").toLowerCase()
 
 const regionMapCache = {
   regionMap: new Map<string, HttpTypes.StoreRegion>(),
@@ -136,6 +136,13 @@ async function setCacheId(request: NextRequest, response: NextResponse) {
  */
 export async function middleware(request: NextRequest) {
   try {
+    // ✅ Fix root 404: always redirect "/" to a country code route
+    if (request.nextUrl.pathname === "/") {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${DEFAULT_REGION}`
+      return NextResponse.redirect(url, 307)
+    }
+
     const searchParams = request.nextUrl.searchParams
     const cartId = searchParams.get("cart_id")
     const checkoutStep = searchParams.get("step")
