@@ -1,0 +1,350 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+
+  input:focus ~ label,
+  input:not(:placeholder-shown) ~ label {
+    @apply -translate-y-2 text-xsmall-regular;
+  }
+
+  input:focus ~ label {
+    @apply left-0;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    border: 1px solid #212121;
+    -webkit-text-fill-color: #212121;
+    -webkit-box-shadow: 0 0 0px 1000px #fff inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+  .content-container {
+    @apply max-w-[1720px] w-full mx-auto px-2;
+  }
+
+  .contrast-btn {
+    @apply px-4 py-2 border border-black rounded-full hover:bg-black hover:text-white transition-colors duration-200 ease-in;
+  }
+
+  .text-xsmall-regular {
+    @apply text-[10px] leading-4 font-normal;
+  }
+
+  .text-small-regular {
+    @apply text-xs leading-5 font-normal;
+  }
+
+  .text-small-semi {
+    @apply text-xs leading-5 font-semibold;
+  }
+
+  .flatlist-mini-text {
+    @apply text-sm leading-6 font-normal;
+  }
+
+  .text-base-semi {
+    @apply text-sm leading-6 font-semibold;
+  }
+
+  .text-large-regular {
+    @apply text-base leading-6 font-normal;
+  }
+
+  .text-large-semi {
+    @apply text-base leading-6 font-semibold;
+  }
+
+  .text-xl-regular {
+    @apply text-2xl leading-[36px] font-normal;
+  }
+
+  .text-xl-semi {
+    @apply text-2xl leading-[36px] font-semibold;
+  }
+
+  .text-2xl-regular {
+    @apply text-[30px] leading-[48px] font-normal;
+  }
+
+  .text-2xl-semi {
+    @apply text-[30px] leading-[48px] font-semibold;
+  }
+
+  .flatlist-mini-title {
+    @apply text-[32px] leading-[44px] font-normal;
+  }
+
+  .text-3xl-semi {
+    @apply text-[32px] leading-[44px] font-semibold;
+  }
+}
+
+/* FLATLIST TEXT */
+
+.flatlist-h1 {
+  font-family: var(--font-america);
+  font-size: 2.5rem;
+  line-height: 2.8rem;
+  font-weight: 400;
+}
+
+.flatlist-h2 {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2.8rem;
+  font-weight: 400;
+}
+
+/* This is the product title shown on the product page */
+
+.flatlist-product-title-bold {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-product-title-medium {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-grid-title {
+  font-family: var(--font-america);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 400;
+}
+
+.flatlist-grid-subtitle {
+  font-family: var(--font-america);
+  font-size: 0.7rem;
+  line-height: 1rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-big-title {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2.4rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-big-title-medium {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2.4rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-medium-title {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2.4rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-medium-title-bold {
+  font-family: var(--font-america);
+  font-size: 2rem;
+  line-height: 2.4rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-small-title {
+  font-family: var(--font-america);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-mini-title {
+  font-family: var(--font-america);
+  font-size: 1rem;
+  line-height: 1.2rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-mini-title-bold {
+  font-family: var(--font-america);
+  font-size: 1rem;
+  line-height: 1.2rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-mini-title-dark {
+  font-family: var(--font-america);
+  font-size: 1rem;
+  line-height: 1.2rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-mini-title-dark-bold {
+  font-family: var(--font-america);
+  font-size: 1rem;
+  font-kerning: none;
+  color: black;
+  line-height: 1.2rem;
+  font-weight: 450;
+  text-transform: uppercase;
+}
+
+.flatlist-micro-title {
+  font-family: var(--font-america);
+  font-size: 0.7rem;
+  line-height: 1rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.flatlist-micro-title-bold {
+  font-family: var(--font-america);
+  font-size: 0.7rem;
+  line-height: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-micro-title-dark-bold {
+  font-family: var(--font-america);
+  font-size: 0.7rem;
+  font-kerning: none;
+  color: black;
+  line-height: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.flatlist-text {
+  font-family: var(--font-america);
+  font-size: 0.9rem;
+  line-height: 1.2rem;
+  letter-spacing: 0.02rem;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.flatlist-text-bold {
+  font-family: var(--font-america);
+  font-size: 0.9rem;
+  line-height: 1.2rem;
+  letter-spacing: 0.02rem;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.flatlist-text-input {
+  font-family: var(--font-america);
+  font-size: 16px;
+  line-height: 1.2rem;
+  letter-spacing: 0.02rem;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.flatlist-mini-text {
+  font-family: var(--font-america);
+  font-size: 0.8rem;
+  line-height: 1rem;
+  letter-spacing: 0.02rem;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.flatlist-mini-text-italic {
+  font-family: var(--font-america);
+  font-size: 0.8rem;
+  line-height: 1rem;
+  letter-spacing: 0.02rem;
+  font-weight: 400;
+  word-break: break-word;
+  font-style: italic;
+}
+
+.flatlist-text-link {
+  font-family: var(--font-america);
+  font-size: 0.9rem;
+  line-height: 1.2rem;
+  font-weight: 400;
+}
+
+/* FLATLIST BUTTONS */
+
+.flatlist-light-button {
+  @apply h-12 bg-white text-black border border-[0.5] border-black rounded-none text-[0.8125rem] font-america font-medium uppercase backdrop-invert-0 shadow-none ring-0 invert-0 transition-none;
+
+  &:hover {
+    @apply hover:bg-black hover:text-white hover:border hover:border-[0.5] hover:border-black;
+  }
+}
+
+.flatlist-dark-button {
+  @apply h-12 bg-black text-white border border-[0.5] border-black rounded-none text-[0.8125rem] font-america font-medium uppercase backdrop-invert-0 shadow-none ring-0 invert-0 transition-none;
+
+  &:hover {
+    @apply hover:bg-white hover:text-black hover:border hover:border-[0.5] hover:border-black;
+  }
+}
+
+.journal-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  grid-column-gap: 4px;
+  grid-row-gap: 4px;
+}
+
+.min-h-screen-no-nav {
+  min-height: calc(100vh - 36rem);
+}
+
+.country-dropdown {
+  @apply outline-none w-full text-white small:text-black border-0 rounded-none text-[1rem] small:text-[0.7rem] font-america uppercase backdrop-invert-0 shadow-none ring-0 invert-0 transition-none;
+}
