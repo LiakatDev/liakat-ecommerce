@@ -19,13 +19,12 @@ const regionCache = {
 }
 
 async function getRegions() {
-  if (
-    regionCache.map.size &&
-    regionCache.updated > Date.now() - 60 * 60 * 1000
-  ) {
+  // 1 hour cache
+  if (regionCache.map.size && regionCache.updated > Date.now() - 60 * 60 * 1000) {
     return regionCache.map
   }
 
+  // fail open if env missing (prevents 500 on Vercel)
   if (!BACKEND_URL || !PUBLISHABLE_API_KEY) {
     return regionCache.map
   }
@@ -38,18 +37,18 @@ async function getRegions() {
 
     if (!res.ok) return regionCache.map
 
-    const data = await res.json()
+    const data = await res.json().catch(() => null)
     const regions = data?.regions || []
 
-    regionCache.map = new Map()
-
+    const nextMap = new Map<string, HttpTypes.StoreRegion>()
     regions.forEach((region: HttpTypes.StoreRegion) => {
       region.countries?.forEach((c) => {
         const code = c.iso_2?.toLowerCase()
-        if (code) regionCache.map.set(code, region)
+        if (code) nextMap.set(code, region)
       })
     })
 
+    regionCache.map = nextMap
     regionCache.updated = Date.now()
   } catch {
     // fail open
@@ -76,7 +75,7 @@ export async function middleware(request: NextRequest) {
     const { nextUrl } = request
     const { pathname } = nextUrl
 
-    // Skip static files
+    // Skip static files fast
     if (pathname.includes(".")) return NextResponse.next()
 
     // Skip auth routes
@@ -89,16 +88,15 @@ export async function middleware(request: NextRequest) {
     }
 
     const regions = await getRegions()
+
+    // If regions can't be fetched, don't break the site
     if (!regions.size) return NextResponse.next()
 
     const urlCountry = getCountryFromUrl(pathname)
+    const validCountry = typeof urlCountry === "string" && regions.has(urlCountry)
 
-    const validCountry =
-      typeof urlCountry === "string" && regions.has(urlCountry)
-
-    // ✅ country always string (no TS error)
+    // Pick a country safely (always string)
     let country: string = DEFAULT_REGION
-
     const firstKey = regions.keys().next().value as string | undefined
 
     if (validCountry) {
@@ -109,27 +107,37 @@ export async function middleware(request: NextRequest) {
       country = firstKey
     }
 
-    // ROOT "/" → redirect
+    // "/" → "/{country}"
     if (pathname === "/") {
       const url = nextUrl.clone()
       url.pathname = `/${country}`
       return NextResponse.redirect(url, 307)
     }
 
-    // Missing/invalid country in URL → prefix it
+    // If missing/invalid country, prefix it (avoid /dk/dk/...)
     if (!validCountry) {
       const url = nextUrl.clone()
-      url.pathname = `/${country}${pathname}`
-      return NextResponse.redirect(url, 307)
+
+      const alreadyPrefixed =
+        pathname === `/${country}` || pathname.startsWith(`/${country}/`)
+
+      if (!alreadyPrefixed) {
+        url.pathname = `/${country}${pathname}`
+      }
+
+      const res = NextResponse.redirect(url, 307)
+      ensureCacheCookie(request, res)
+      return res
     }
 
-    // Handle cart step redirect
+    // cart_id present but no step → force step=address
     const cartId = nextUrl.searchParams.get("cart_id")
     const step = nextUrl.searchParams.get("step")
 
     if (cartId && !step) {
       const url = nextUrl.clone()
       url.searchParams.set("step", "address")
+
       const res = NextResponse.redirect(url, 307)
       res.cookies.set("_medusa_cart_id", cartId, {
         path: "/",
@@ -139,14 +147,18 @@ export async function middleware(request: NextRequest) {
       return res
     }
 
+    // normal request
     const response = NextResponse.next()
     ensureCacheCookie(request, response)
     return response
   } catch {
+    // NEVER crash middleware on Vercel
     return NextResponse.next()
   }
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|images|assets).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|images|assets|.*\\.(?:png|svg|jpg|jpeg|gif|webp|ico|css|js|map)$).*)",
+  ],
 }
