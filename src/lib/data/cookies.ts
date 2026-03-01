@@ -1,9 +1,7 @@
 import "server-only"
 import { cookies as nextCookies } from "next/headers"
 
-export const getAuthHeaders = async (): Promise<
-  { authorization: string } | {}
-> => {
+export const getAuthHeaders = async (): Promise<{ authorization: string } | {}> => {
   const cookies = await nextCookies()
   const token = cookies.get("_medusa_jwt")?.value
 
@@ -24,7 +22,7 @@ export const getCacheTag = async (tag: string): Promise<string> => {
     }
 
     return `${tag}-${cacheId}`
-  } catch (error) {
+  } catch {
     return ""
   }
 }
@@ -32,6 +30,7 @@ export const getCacheTag = async (tag: string): Promise<string> => {
 export const getCacheOptions = async (
   tag: string
 ): Promise<{ tags: string[] } | {}> => {
+  // Always server-only, but keep this guard anyway
   if (typeof window !== "undefined") {
     return {}
   }
@@ -48,9 +47,10 @@ export const getCacheOptions = async (
 export const setAuthToken = async (token: string) => {
   const cookies = await nextCookies()
   cookies.set("_medusa_jwt", token, {
+    path: "/",
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   })
 }
@@ -58,6 +58,7 @@ export const setAuthToken = async (token: string) => {
 export const removeAuthToken = async () => {
   const cookies = await nextCookies()
   cookies.set("_medusa_jwt", "", {
+    path: "/",
     maxAge: -1,
   })
 }
@@ -70,9 +71,10 @@ export const getCartId = async () => {
 export const setCartId = async (cartId: string) => {
   const cookies = await nextCookies()
   cookies.set("_medusa_cart_id", cartId, {
+    path: "/",
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   })
 }
@@ -80,6 +82,7 @@ export const setCartId = async (cartId: string) => {
 export const removeCartId = async () => {
   const cookies = await nextCookies()
   cookies.set("_medusa_cart_id", "", {
+    path: "/",
     maxAge: -1,
   })
 }
