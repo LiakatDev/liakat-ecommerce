@@ -128,7 +128,7 @@ const Shipping: React.FC<ShippingProps> = ({
         <div data-testid="delivery-options-container">
           <div className="pb-8">
             <RadioGroup
-              value={shippingMethodId}
+              value={shippingMethodId ?? undefined}
               onChange={handleSetShippingMethod}
             >
               {availableShippingMethods?.map((option) => {
