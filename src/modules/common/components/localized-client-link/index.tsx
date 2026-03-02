@@ -4,27 +4,25 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import React from "react"
 
-type Props = {
+/**
+ * Use this component to create a Next.js `<Link />` that persists the current country code in the url,
+ * without having to explicitly pass it as a prop.
+ */
+const LocalizedClientLink = ({
+  children,
+  href,
+  ...props
+}: {
   children?: React.ReactNode
   href: string
   className?: string
   onClick?: () => void
   passHref?: true
   [x: string]: any
-}
+}) => {
+  const { countryCode } = useParams()
 
-/**
- * Safe Localized Link
- * ✅ Prevents /dk/dk/store
- * ✅ Works with external links
- * ✅ Safe when countryCode missing
- */
-const LocalizedClientLink = ({ children, href, ...props }: Props) => {
-  const params = useParams() as { countryCode?: string }
-  const countryCode = (params?.countryCode || "").toString()
-
-  // External link (http/https)
-  if (/^https?:\/\//i.test(href)) {
+  if (href.includes("https")) {
     return (
       <a href={href} {...props}>
         {children}
@@ -32,30 +30,10 @@ const LocalizedClientLink = ({ children, href, ...props }: Props) => {
     )
   }
 
-  const cleanHref = href.startsWith("/") ? href : `/${href}`
-
-  // If no countryCode (edge cases)
-  if (!countryCode) {
-    return (
-      <Link href={cleanHref} {...props}>
-        {children}
-      </Link>
-    )
-  }
-
-  const prefix = `/${countryCode}`
-
-  // If already prefixed -> don't duplicate
-  if (cleanHref === prefix || cleanHref.startsWith(`${prefix}/`)) {
-    return (
-      <Link href={cleanHref} {...props}>
-        {children}
-      </Link>
-    )
-  }
+  const link = `/${countryCode}${href.startsWith("/") ? href : `/${href}`}`
 
   return (
-    <Link href={`${prefix}${cleanHref}`} {...props}>
+    <Link href={link} {...props}>
       {children}
     </Link>
   )
