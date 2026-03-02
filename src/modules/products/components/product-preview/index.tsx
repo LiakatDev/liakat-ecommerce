@@ -59,7 +59,7 @@ export default async function ProductPreview({
             )}
           </div>
           {includes(imageUrl, "placehold.co") ? (
-            <img src={imageUrl} className="h-full w-full object-cover" />
+            <img src={imageUrl} className="h-80 w-full object-cover object-center" />
           ) : (
             <Image
               width={1200}
