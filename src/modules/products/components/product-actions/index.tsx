@@ -154,9 +154,7 @@ export default function ProductActions({
         <div className="flex flex-col gap-3 lg:gap-3 w-full small:max-w-[300px] items-end mt-6 md:mt-24 mb-6 small:mb-0">
           <button
             onClick={handleAddToCart}
-            disabled={
-              !inStock ||
-              !selectedVariant ||
+            disabled={!selectedVariant ||
               !!disabled ||
               isAdding ||
               !isValidVariant
@@ -166,9 +164,7 @@ export default function ProductActions({
           >
             {!selectedVariant && !options
               ? "Select variant"
-              : !inStock || !isValidVariant
-                ? "Out of stock"
-                : isAdding
+              : !isValidVariant`n                ? "Select variant": isAdding
                   ? "Adding to cart..."
                   : "Add to cart"}
           </button>
