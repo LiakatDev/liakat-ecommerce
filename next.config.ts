@@ -15,6 +15,12 @@ const nextConfig: NextConfig = withStoreConfig({
   images: {
     remotePatterns: [
       {
+        protocol: "https",
+        hostname: "liakat-ecommerce.vercel.app",
+        port: "",
+        pathname: "/**",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
       },
