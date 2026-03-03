@@ -9,7 +9,8 @@ import { HttpTypes } from "@medusajs/types"
  * Normalize image url:
  * - If it's already relative (/products/...), keep it.
  * - If it's your Vercel domain absolute URL, convert to relative path.
- * - If it's a Medusa static URL (/static/filename), map to /products/filename (from /public/products).
+ * - If it's a Medusa static URL (/static/<filename>), map to /products/<filename> (from /public/products).
+ * - IMPORTANT: Medusa can prefix filenames like "1772...-Screenshot.png" — we strip "digits-" part.
  * - Otherwise keep as-is.
  */
 function normalizeImageUrl(url?: string | null) {
@@ -18,34 +19,42 @@ function normalizeImageUrl(url?: string | null) {
   const u = String(url).trim()
   if (!u) return undefined
 
+  const stripPrefix = (filename: string) => filename.replace(/^\d+-/, "")
+
   // Already relative => best for next/image (served from /public)
   if (u.startsWith("/")) {
     // If it's /static/xxx, map to /products/xxx
     if (u.startsWith("/static/")) {
       const filename = u.split("/").pop()
-      return filename ? `/products/${filename}` : u
+      const clean = filename ? stripPrefix(filename) : ""
+      return clean ? `/products/${clean}` : u
     }
+
     return u
   }
 
   // Parse absolute url
   try {
     const parsed = new URL(u)
-    const host = parsed.hostname.toLowerCase()
+    const host = (parsed.hostname || "").toLowerCase()
     const pathname = parsed.pathname || "/"
 
     // If URL is your storefront domain and points to /products, convert to relative
-    if (host === "liakat-ecommerce.vercel.app" && pathname.startsWith("/products/")) {
+    if (
+      host === "liakat-ecommerce.vercel.app" &&
+      pathname.startsWith("/products/")
+    ) {
       return pathname
     }
 
     // If it points to medusa static files, map to /products/<filename>
     // Examples:
-    // - http://localhost:9000/static/Screenshot%202026-01-18%20113359.png
-    // - https://genuine-victory-production.up.railway.app/static/xxx.png
+    // - http://localhost:9000/static/1772-File.png
+    // - https://genuine-victory-production.up.railway.app/static/1772-File.png
     if (pathname.startsWith("/static/")) {
       const filename = pathname.split("/").pop()
-      return filename ? `/products/${filename}` : pathname
+      const clean = filename ? stripPrefix(filename) : ""
+      return clean ? `/products/${clean}` : pathname
     }
 
     return u
