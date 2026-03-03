@@ -4,7 +4,6 @@ import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { useIntersection } from "@/lib/hooks/use-in-view"
 import Divider from "@/modules/common/components/divider"
 import OptionSelect from "@/modules/products/components/option-select"
 import ProductPrice from "../product-price"
@@ -47,7 +46,7 @@ export default function ProductActions({
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
-      return
+      return undefined
     }
 
     return product.variants.find((v) => {
@@ -64,7 +63,7 @@ export default function ProductActions({
     }))
   }
 
-  //check if the selected options produce a valid variant
+  // check if the selected options produce a valid variant
   const isValidVariant = useMemo(() => {
     return product.variants?.some((v) => {
       const variantOptions = optionsAsKeymap(v.options)
@@ -72,14 +71,13 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // check if the selected variant is in stock
+  // check if the selected variant is in stock (kept for future UI use)
+  // Note: inventory_quantity from Store API can be unreliable in some setups.
   const inStock = useMemo(() => {
-    // If we don't manage inventory, we can always add to cart
     if (selectedVariant && !selectedVariant.manage_inventory) {
       return true
     }
 
-    // If there is inventory available, we can add to cart
     if (
       selectedVariant?.manage_inventory &&
       (selectedVariant?.inventory_quantity || 0) > 0
@@ -87,16 +85,13 @@ export default function ProductActions({
       return true
     }
 
-    // Otherwise, we can't add to cart
     return false
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
 
   const handleAddToCart = async () => {
-    if (!selectedVariant?.id) return null
-
-    console.log("adding to cart")
+    if (!selectedVariant?.id) return
 
     setIsAdding(true)
 
@@ -107,11 +102,10 @@ export default function ProductActions({
         countryCode,
       })
 
-      console.log("added to cart")
-
       addToCartGtm(product, 1, region.currency_code)
     } catch (error) {
       console.error("Error adding to cart:", error)
+      // Optional: show UI error message/toast here
     } finally {
       setIsAdding(false)
     }
@@ -154,17 +148,15 @@ export default function ProductActions({
         <div className="flex flex-col gap-3 lg:gap-3 w-full small:max-w-[300px] items-end mt-6 md:mt-24 mb-6 small:mb-0">
           <button
             onClick={handleAddToCart}
-            disabled={!selectedVariant ||
-              !!disabled ||
-              isAdding ||
-              !isValidVariant
-            }
+            disabled={!selectedVariant || !!disabled || isAdding || !isValidVariant}
             className="flatlist-dark-button w-full h-10"
             data-testid="add-product-button"
           >
-            {!selectedVariant && !options
+            {!selectedVariant
               ? "Select variant"
-              : !isValidVariant`n                ? "Select variant": isAdding
+              : !isValidVariant
+                ? "Select variant"
+                : isAdding
                   ? "Adding to cart..."
                   : "Add to cart"}
           </button>
