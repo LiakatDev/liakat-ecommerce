@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { Metadata } from "next"
 import { SortOptions } from "@/modules/store/components/refinement-list/sort-products"
 import StoreTemplate from "@/modules/store/templates"
